@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>RutaVisita | Control de visitas</title>
+
+  <meta name="description" content="Sistema personal para organizar domicilios, visitas y rutas de transporte público.">
+  <meta name="theme-color" content="#123b67">
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">RV</span>
+      <div>
+        <h1>RutaVisita</h1>
+        <p>Organiza tus visitas, optimiza tu recorrido</p>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones">
+    <button type="button" class="tab active" data-view="ruta">Ruta</button>
+    <button type="button" class="tab" data-view="domicilios">Domicilios</button>
+    <button type="button" class="tab" data-view="gastos">Gastos</button>
+    <button type="button" class="tab" data-view="respaldo">Respaldo</button>
+  </nav>
+
+  <main class="container">
+
+    <div id="backup-banner" class="banner" hidden>
+      <span id="backup-banner-text"></span>
+      <button type="button" class="banner-btn" data-view-go="respaldo">Respaldar</button>
+    </div>
+
+    <!-- ================= RUTA ================= -->
+    <section id="view-ruta" class="view">
+
+      <section class="summary">
+        <div class="route-date">
+          <label for="route-date">Ruta del día</label>
+          <div class="route-date-row">
+            <button type="button" class="ghost small" id="route-prev" aria-label="Día anterior">‹</button>
+            <input type="date" id="route-date">
+            <button type="button" class="ghost small" id="route-next" aria-label="Día siguiente">›</button>
+            <button type="button" class="ghost small" id="route-today">Hoy</button>
+          </div>
+        </div>
+
+        <div class="summary-grid four">
+          <article class="summary-card">
+            <span id="stat-stops">0</span>
+            <p>Paradas</p>
+          </article>
+          <article class="summary-card">
+            <span id="stat-pending">0</span>
+            <p>Por visitar</p>
+          </article>
+          <article class="summary-card">
+            <span id="stat-done">0</span>
+            <p>Visitadas</p>
+          </article>
+          <article class="summary-card">
+            <span id="stat-eff">–</span>
+            <p>Efectividad</p>
+          </article>
+        </div>
+        <p id="route-meta" class="route-meta"></p>
+      </section>
+
+      <section class="panel" id="next-stop-panel" hidden>
+        <h2>Siguiente parada</h2>
+        <div id="next-stop"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Paradas del día</h2>
+
+        <div class="route-tools">
+          <div>
+            <label for="travel-mode">Cómo te mueves</label>
+            <select id="travel-mode">
+              <option value="transit">Transporte público</option>
+              <option value="driving">Auto / moto</option>
+              <option value="walking">A pie</option>
+            </select>
+          </div>
+          <button type="button" id="optimize-route">Ordenar ruta automáticamente</button>
+          <div id="full-route-links"></div>
+        </div>
+        <p class="hint" id="route-hint"></p>
+
+        <div id="route-list"></div>
+      </section>
+
+      <section class="panel" id="overdue-panel" hidden>
+        <h2>Atrasadas</h2>
+        <p class="hint">Visitas con fecha anterior a hoy que siguen abiertas.</p>
+        <div id="overdue-list"></div>
+        <button type="button" class="ghost" id="overdue-all">Mover todas a la ruta de hoy</button>
+      </section>
+
+      <section class="panel" id="unscheduled-panel" hidden>
+        <h2>Pendientes sin fecha</h2>
+        <p class="hint" id="unscheduled-hint"></p>
+        <div id="unscheduled-list"></div>
+      </section>
+    </section>
+
+    <!-- ================= DOMICILIOS ================= -->
+    <section id="view-domicilios" class="view" hidden>
+
+      <section class="panel">
+        <h2 id="form-title">Registrar domicilio</h2>
+
+        <form id="visit-form" autocomplete="off">
+          <input type="hidden" id="visit-id">
+
+          <label for="person">Nombre o referencia</label>
+          <input type="text" id="person" placeholder="Nombre de la persona" required>
+
+          <label for="address">Domicilio</label>
+          <textarea id="address" placeholder="Calle, número, colonia, municipio" required></textarea>
+
+          <label for="zone">Zona o colonia (para agrupar la ruta)</label>
+          <input type="text" id="zone" list="zone-options" placeholder="Ej. Centro, Iztapalapa, Ecatepec">
+          <datalist id="zone-options"></datalist>
+
+          <label for="phone">Teléfono (opcional)</label>
+          <input type="tel" id="phone" placeholder="Teléfono de contacto">
+
+          <div class="grid-2">
+            <div>
+              <label for="planned-date">Fecha programada (vacía = sin fecha)</label>
+              <input type="date" id="planned-date">
+            </div>
+            <div>
+              <label for="priority">Prioridad</label>
+              <select id="priority">
+                <option value="Normal">Normal</option>
+                <option value="Alta">Alta</option>
+                <option value="Baja">Baja</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="window">Horario preferido</label>
+          <select id="window">
+            <option value="Cualquier hora">Cualquier hora</option>
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+          </select>
+
+          <label for="coords">Ubicación exacta (opcional)</label>
+          <input type="text" id="coords" inputmode="text"
+            placeholder="Pega un enlace de Google Maps o 19.4326, -99.1332">
+          <button type="button" class="ghost" id="use-location">Usar mi ubicación actual</button>
+          <p class="hint" id="coords-hint">Con la ubicación exacta la ruta se ordena por cercanía.</p>
+
+          <label for="status">Estado de la visita</label>
+          <select id="status">
+            <option value="Pendiente">Pendiente</option>
+            <option value="Visitado">Visitado</option>
+            <option value="No localizado">No localizado</option>
+            <option value="Seguimiento">Seguimiento</option>
+            <option value="Reprogramado">Reprogramado</option>
+          </select>
+
+          <label for="notes">Observaciones</label>
+          <textarea id="notes" placeholder="Anota información importante"></textarea>
+
+          <button type="submit" id="save-visit">Guardar domicilio</button>
+          <button type="button" class="ghost" id="cancel-edit" hidden>Cancelar edición</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Mis domicilios</h2>
+
+        <div class="filters">
+          <label for="search">Buscar</label>
+          <input type="search" id="search" placeholder="Nombre, domicilio, zona o teléfono">
+
+          <div class="grid-2">
+            <div>
+              <label for="filter-status">Estado</label>
+              <select id="filter-status">
+                <option value="Todas">Todos</option>
+                <option value="Pendiente">Pendientes</option>
+                <option value="Visitado">Visitados</option>
+                <option value="No localizado">No localizados</option>
+                <option value="Seguimiento">Seguimiento</option>
+                <option value="Reprogramado">Reprogramados</option>
+              </select>
+            </div>
+            <div>
+              <label for="filter-zone">Zona</label>
+              <select id="filter-zone">
+                <option value="Todas">Todas</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <p class="hint" id="list-count"></p>
+
+        <div id="visits-list">
+          <p class="empty-message">Todavía no tienes domicilios registrados.</p>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= GASTOS ================= -->
+    <section id="view-gastos" class="view" hidden>
+      <section class="panel">
+        <h2>Control de transporte</h2>
+
+        <label for="expense-date">Fecha</label>
+        <input type="date" id="expense-date">
+
+        <label for="transport-cost">Monto ($)</label>
+        <input type="number" id="transport-cost" min="0" step="0.50" inputmode="decimal" placeholder="Ej. 12">
+
+        <div class="grid-2">
+          <button type="button" id="add-expense">Sumar al día</button>
+          <button type="button" class="ghost" id="save-expense">Fijar total del día</button>
+        </div>
+
+        <p id="expense-summary">Gasto registrado: $0.00</p>
+      </section>
+
+      <section class="panel">
+        <h2>Resumen</h2>
+        <div class="summary-grid four">
+          <article class="summary-card"><span id="exp-week">$0</span><p>Esta semana</p></article>
+          <article class="summary-card"><span id="exp-month">$0</span><p>Este mes</p></article>
+          <article class="summary-card"><span id="exp-visits">0</span><p>Visitas (semana)</p></article>
+          <article class="summary-card"><span id="exp-per-visit">–</span><p>Costo por visita</p></article>
+        </div>
+        <h3 class="subhead">Últimos 14 días</h3>
+        <div id="expense-history"></div>
+      </section>
+    </section>
+
+    <!-- ================= RESPALDO ================= -->
+    <section id="view-respaldo" class="view" hidden>
+      <section class="panel">
+        <h2>Respaldo de tu información</h2>
+        <p class="hint strong">
+          Tus datos viven solo en este teléfono. Si borras los datos del navegador
+          o cambias de equipo, se pierden. Haz un respaldo seguido.
+        </p>
+        <p id="backup-status" class="hint"></p>
+
+        <button type="button" id="export-json">Descargar respaldo (JSON)</button>
+        <button type="button" class="ghost" id="share-json">Compartir respaldo…</button>
+        <button type="button" class="ghost" id="export-visits-csv">Exportar domicilios (Excel / CSV)</button>
+        <button type="button" class="ghost" id="export-expenses-csv">Exportar gastos (Excel / CSV)</button>
+      </section>
+
+      <section class="panel">
+        <h2>Restaurar respaldo</h2>
+        <label for="import-mode">Modo</label>
+        <select id="import-mode">
+          <option value="merge">Combinar con lo que ya tengo</option>
+          <option value="replace">Reemplazar todo</option>
+        </select>
+
+        <label for="import-file">Archivo de respaldo (.json)</label>
+        <input type="file" id="import-file" accept="application/json,.json">
+      </section>
+
+      <section class="panel">
+        <h2>Privacidad</h2>
+        <p class="hint">
+          Los domicilios y teléfonos son datos personales de terceros. La app no los
+          envía a ningún servidor. Cuida el respaldo: guárdalo en un lugar privado.
+        </p>
+      </section>
+    </section>
+
+  </main>
+
+  <!-- Diálogo para cambiar estado -->
+  <dialog id="status-dialog">
+    <form method="dialog" id="status-form">
+      <h2 id="dialog-title">Actualizar visita</h2>
+      <p id="dialog-person" class="hint"></p>
+
+      <label for="dialog-status">Nuevo estado</label>
+      <select id="dialog-status"></select>
+
+      <div id="dialog-date-wrap">
+        <label for="dialog-date" id="dialog-date-label">Fecha</label>
+        <input type="date" id="dialog-date">
+      </div>
+
+      <label for="dialog-note">Nota (opcional)</label>
+      <textarea id="dialog-note" placeholder="Qué pasó en la visita"></textarea>
+
+      <div class="grid-2">
+        <button type="submit" id="dialog-ok" value="ok">Guardar</button>
+        <button type="button" class="ghost" id="dialog-cancel">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <footer>
+    <p>RutaVisita · Gestión personal de recorridos</p>
+  </footer>
+
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker
+          .register("./service-worker.js")
+          .catch((error) => console.error("Error PWA:", error));
+      });
+    }
+  </script>
+</body>
+</html>
